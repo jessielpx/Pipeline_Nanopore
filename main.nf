@@ -2,12 +2,10 @@ nextflow.enable.dsl = 2
 
 include { PYCOQC } from './modules/local/pycoqc/main'
 include { FASTCAT } from './modules/local/fastcat/main'
+include { BUILD_MINIMAP2_INDEX } from './modules/local/build_minimap2_index/main'
 
 workflow {
 
-    /*
-     * Check required inputs
-     */
     if (!params.summary) {
         error "Please provide --summary /path/to/sequencing_summary.txt"
     }
@@ -16,9 +14,10 @@ workflow {
         error "Please provide --fastq_dir /path/to/barcode_directories"
     }
 
-    /*
-     * Run-level quality control
-     */
+    if (!params.ref_genome) {
+        error "Please provide --ref_genome /path/to/reference.fa"
+    }
+
     summary_ch = Channel.of(
         tuple(
             [id: params.run_id],
@@ -28,9 +27,6 @@ workflow {
 
     PYCOQC(summary_ch)
 
-    /*
-     * Read sample metadata and locate each barcode directory
-     */
     samples_ch = Channel
         .fromPath(
             "${projectDir}/assets/samples.csv",
@@ -53,8 +49,11 @@ workflow {
             tuple(meta, barcode_dir)
         }
 
-    /*
-     * Barcode-level FASTQ concatenation
-     */
     FASTCAT(samples_ch)
+
+    reference_ch = Channel.of(
+        file(params.ref_genome, checkIfExists: true)
+    )
+
+    BUILD_MINIMAP2_INDEX(reference_ch)
 }
