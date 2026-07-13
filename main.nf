@@ -1,5 +1,12 @@
 nextflow.enable.dsl = 2
 
+params.input = "${projectDir}/assets/samples.csv"
+
 workflow {
-    println "Hello, long-read RNA pipeline!"
+
+    samples_ch = Channel
+        .fromPath(params.input)
+        .splitCsv(header: true)
+
+    samples_ch.view()
 }
