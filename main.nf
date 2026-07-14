@@ -17,7 +17,7 @@ include { ANNOTATE_AND_SUM_COUNTS }   from './modules/local/annotate_and_sum_cou
 include { DIFFERENTIAL_EXPRESSION }   from './modules/local/differential_expression/main'
 include { FILTER_UNSTRANDED_ANNOTATION } from './modules/local/filter_unstranded_annotation/main'
 include { GFFCOMPARE } from './modules/local/gffcompare/main'
-
+include { PARSE_GFFCOMPARE } from './modules/local/parse_gffcompare/main'
 
 workflow {
 
@@ -197,6 +197,18 @@ workflow {
     GFFCOMPARE(
         STRINGTIE_MERGE.out.merged_gtf,
         cleaned_gtf_ch
+    )
+
+    parse_gffcompare_script_ch = Channel.value(
+        file(
+            "${projectDir}/bin/parse_gffcompare_annotation.py",
+            checkIfExists: true
+        )
+    )
+
+    PARSE_GFFCOMPARE(
+        GFFCOMPARE.out.annotated_gtf,
+        parse_gffcompare_script_ch
     )
 
 
