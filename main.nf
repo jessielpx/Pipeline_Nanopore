@@ -13,7 +13,9 @@ include { BUILD_TRANSCRIPTOME_INDEX } from './modules/local/build_transcriptome_
 include { MAP_TRANSCRIPTOME }         from './modules/local/map_transcriptome/main'
 include { SALMON_QUANT }              from './modules/local/salmon_quant/main'
 include { MERGE_TRANSCRIPT_COUNTS }   from './modules/local/merge_transcript_counts/main'
-include { ANNOTATE_AND_SUM_COUNTS } from './modules/local/annotate_and_sum_counts/main'
+include { ANNOTATE_AND_SUM_COUNTS }   from './modules/local/annotate_and_sum_counts/main'
+include { DIFFERENTIAL_EXPRESSION }   from './modules/local/differential_expression/main'
+include { FILTER_UNSTRANDED_ANNOTATION } from './modules/local/filter_unstranded_annotation/main'
 
 
 workflow {
@@ -65,6 +67,7 @@ workflow {
             def meta = [
                 barcode  : row.barcode,
                 sample   : row.sample,
+                alias    : row.alias,
                 condition: row.condition
             ]
 
@@ -87,18 +90,26 @@ workflow {
      * Reusable reference inputs
      */
     reference_fasta_ch = Channel.value(
-        file(params.ref_genome, checkIfExists: true)
+        file(
+            params.ref_genome,
+            checkIfExists: true
+        )
     )
 
     annotation_gtf_ch = Channel.value(
-        file(params.ref_annotation, checkIfExists: true)
+        file(
+            params.ref_annotation,
+            checkIfExists: true
+        )
     )
 
 
     /*
      * Build genome Minimap2 index
      */
-    BUILD_MINIMAP2_INDEX(reference_fasta_ch)
+    BUILD_MINIMAP2_INDEX(
+        reference_fasta_ch
+    )
 
 
     /*
@@ -213,7 +224,7 @@ workflow {
 
 
     /*
-     * Collect all sample-level Salmon output files
+     * Collect all sample-level Salmon outputs
      */
     transcript_count_files_ch = SALMON_QUANT.out.counts
         .map { meta, count_file ->
@@ -241,6 +252,10 @@ workflow {
         merge_script_ch
     )
 
+
+    /*
+     * Load the transcript-to-gene annotation script
+     */
     annotation_script_ch = Channel.value(
         file(
             "${projectDir}/bin/add_gene_ids_and_sum_counts.py",
@@ -248,10 +263,48 @@ workflow {
         )
     )
 
+
+    /*
+     * Add gene IDs and generate a gene-level count matrix
+     */
     ANNOTATE_AND_SUM_COUNTS(
         MERGE_TRANSCRIPT_COUNTS.out.counts,
         STRINGTIE_MERGE.out.merged_gtf,
         annotation_script_ch
     )
 
+
+    /*
+     * Load inputs required for differential expression analysis
+     */
+    de_sample_sheet_ch = Channel.value(
+        file(
+            "${projectDir}/assets/samples.csv",
+            checkIfExists: true
+        )
+    )
+
+    de_script_ch = Channel.value(
+        file(
+            "${projectDir}/bin/de_analysis.R",
+            checkIfExists: true
+        )
+    )
+
+    /*
+     * Remove unstranded transcript records before DGE/DTU
+     */
+    FILTER_UNSTRANDED_ANNOTATION(
+        STRINGTIE_MERGE.out.merged_gtf
+    )
+
+    /*
+     * Run transcript filtering, DGE and DTU analysis
+     */
+    DIFFERENTIAL_EXPRESSION(
+        de_sample_sheet_ch,
+        MERGE_TRANSCRIPT_COUNTS.out.counts,
+        FILTER_UNSTRANDED_ANNOTATION.out.stranded_gtf,
+        de_script_ch
+    )
 }

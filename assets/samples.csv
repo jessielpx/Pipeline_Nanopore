@@ -1,3 +1,7 @@
-barcode,sample,condition
-barcode53,sample20,HR
-barcode54,sample27,LR
+barcode,sample,alias,condition
+barcode01,sample20,sample20,case
+barcode02,sample27,sample27,case
+barcode05,sample89,sample89,case
+barcode03,sample74,sample74,control
+barcode07,sample102,sample102,control
+barcode11,sample110,sample110,control
