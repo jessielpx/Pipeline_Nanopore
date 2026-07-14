@@ -1,17 +1,19 @@
 nextflow.enable.dsl = 2
 
 include { PYCOQC }                    from './modules/local/pycoqc/main'
-include { FASTCAT }                    from './modules/local/fastcat/main'
-include { BUILD_MINIMAP2_INDEX }       from './modules/local/build_minimap2_index/main'
-include { PREPROCESS_ANNOTATION }      from './modules/local/preprocess_annotation/main'
-include { MINIMAP2_ALIGN }             from './modules/local/minimap2_align/main'
-include { SAMTOOLS_SORT }              from './modules/local/samtools_sort/main'
-include { SAMTOOLS_INDEX }             from './modules/local/samtools_index/main'
-include { STRINGTIE_ASSEMBLY }         from './modules/local/stringtie_assembly/main'
-include { STRINGTIE_MERGE }            from './modules/local/stringtie_merge/main'
-include { BUILD_TRANSCRIPTOME_INDEX }  from './modules/local/build_transcriptome_index/main'
-include { MAP_TRANSCRIPTOME }          from './modules/local/map_transcriptome/main'
-include { SALMON_QUANT }               from './modules/local/salmon_quant/main'
+include { FASTCAT }                   from './modules/local/fastcat/main'
+include { BUILD_MINIMAP2_INDEX }      from './modules/local/build_minimap2_index/main'
+include { PREPROCESS_ANNOTATION }     from './modules/local/preprocess_annotation/main'
+include { MINIMAP2_ALIGN }            from './modules/local/minimap2_align/main'
+include { SAMTOOLS_SORT }             from './modules/local/samtools_sort/main'
+include { SAMTOOLS_INDEX }            from './modules/local/samtools_index/main'
+include { STRINGTIE_ASSEMBLY }        from './modules/local/stringtie_assembly/main'
+include { STRINGTIE_MERGE }           from './modules/local/stringtie_merge/main'
+include { BUILD_TRANSCRIPTOME_INDEX } from './modules/local/build_transcriptome_index/main'
+include { MAP_TRANSCRIPTOME }         from './modules/local/map_transcriptome/main'
+include { SALMON_QUANT }              from './modules/local/salmon_quant/main'
+include { MERGE_TRANSCRIPT_COUNTS }   from './modules/local/merge_transcript_counts/main'
+
 
 workflow {
 
@@ -34,6 +36,7 @@ workflow {
         error "Please provide --ref_annotation /path/to/annotation.gtf"
     }
 
+
     /*
      * Run-level quality control
      */
@@ -45,6 +48,7 @@ workflow {
     )
 
     PYCOQC(summary_ch)
+
 
     /*
      * Read sample metadata and locate barcode directories
@@ -71,10 +75,12 @@ workflow {
             tuple(meta, barcode_dir)
         }
 
+
     /*
      * Merge FASTQ files and generate Fastcat statistics
      */
     FASTCAT(samples_ch)
+
 
     /*
      * Reusable reference inputs
@@ -87,10 +93,12 @@ workflow {
         file(params.ref_annotation, checkIfExists: true)
     )
 
+
     /*
      * Build genome Minimap2 index
      */
     BUILD_MINIMAP2_INDEX(reference_fasta_ch)
+
 
     /*
      * Clean reference annotation
@@ -99,6 +107,7 @@ workflow {
         annotation_gtf_ch,
         reference_fasta_ch
     )
+
 
     /*
      * Extract merged FASTQ files from FASTCAT output
@@ -111,18 +120,17 @@ workflow {
         tuple(meta, fastq_files)
     }
 
-    /*
-     * Reuse genome index for every sample
-     */
-    genome_index_ch = BUILD_MINIMAP2_INDEX.out.first()
 
     /*
      * Align reads to the genome
      */
+    genome_index_ch = BUILD_MINIMAP2_INDEX.out
+
     MINIMAP2_ALIGN(
         merged_fastq_ch,
         genome_index_ch
     )
+
 
     /*
      * Sort genome-aligned SAM files
@@ -131,6 +139,7 @@ workflow {
         MINIMAP2_ALIGN.out.sam
     )
 
+
     /*
      * Index genome-aligned BAM files
      */
@@ -138,18 +147,17 @@ workflow {
         SAMTOOLS_SORT.out.bam
     )
 
-    /*
-     * Reuse cleaned annotation for every sample
-     */
-    cleaned_gtf_ch = PREPROCESS_ANNOTATION.out.cleaned_gtf.first()
 
     /*
      * Assemble transcripts separately for each sample
      */
+    cleaned_gtf_ch = PREPROCESS_ANNOTATION.out.cleaned_gtf
+
     STRINGTIE_ASSEMBLY(
         SAMTOOLS_INDEX.out.indexed_bam,
         cleaned_gtf_ch
     )
+
 
     /*
      * Collect all sample-level assembled GTF files
@@ -160,6 +168,7 @@ workflow {
         }
         .collect()
 
+
     /*
      * Merge all sample transcriptomes
      */
@@ -169,38 +178,65 @@ workflow {
         reference_fasta_ch
     )
 
-    /*
-     * Reuse merged transcriptome FASTA
-     */
-    transcriptome_fasta_ch =
-        STRINGTIE_MERGE.out.transcriptome_fasta.first()
 
     /*
      * Build Minimap2 index for the merged transcriptome
      */
+    transcriptome_fasta_ch =
+        STRINGTIE_MERGE.out.transcriptome_fasta
+
     BUILD_TRANSCRIPTOME_INDEX(
         transcriptome_fasta_ch
     )
 
-    /*
-     * Reuse transcriptome index for every sample
-     */
-    transcriptome_index_ch =
-        BUILD_TRANSCRIPTOME_INDEX.out.index.first()
 
     /*
      * Align reads to the merged transcriptome
      */
+    transcriptome_index_ch =
+        BUILD_TRANSCRIPTOME_INDEX.out.index
+
     MAP_TRANSCRIPTOME(
         merged_fastq_ch,
         transcriptome_index_ch
     )
 
+
     /*
-     * Quantify transcript abundance
+     * Quantify transcript abundance with Salmon
      */
     SALMON_QUANT(
         MAP_TRANSCRIPTOME.out.bam,
         transcriptome_fasta_ch
+    )
+
+
+    /*
+     * Collect all sample-level Salmon output files
+     */
+    transcript_count_files_ch = SALMON_QUANT.out.counts
+        .map { meta, count_file ->
+            count_file
+        }
+        .collect()
+
+
+    /*
+     * Load the local Salmon count-merging script
+     */
+    merge_script_ch = Channel.value(
+        file(
+            "${projectDir}/bin/merge_salmon_counts.py",
+            checkIfExists: true
+        )
+    )
+
+
+    /*
+     * Merge transcript count and TPM matrices
+     */
+    MERGE_TRANSCRIPT_COUNTS(
+        transcript_count_files_ch,
+        merge_script_ch
     )
 }
