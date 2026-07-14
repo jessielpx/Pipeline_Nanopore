@@ -16,6 +16,7 @@ include { MERGE_TRANSCRIPT_COUNTS }   from './modules/local/merge_transcript_cou
 include { ANNOTATE_AND_SUM_COUNTS }   from './modules/local/annotate_and_sum_counts/main'
 include { DIFFERENTIAL_EXPRESSION }   from './modules/local/differential_expression/main'
 include { FILTER_UNSTRANDED_ANNOTATION } from './modules/local/filter_unstranded_annotation/main'
+include { GFFCOMPARE } from './modules/local/gffcompare/main'
 
 
 workflow {
@@ -188,6 +189,14 @@ workflow {
         assembled_gtfs_ch,
         cleaned_gtf_ch,
         reference_fasta_ch
+    )
+
+    /*
+     * Compare merged transcriptome against the reference annotation
+     */
+    GFFCOMPARE(
+        STRINGTIE_MERGE.out.merged_gtf,
+        cleaned_gtf_ch
     )
 
 
