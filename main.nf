@@ -32,8 +32,7 @@ workflow {
     /*
      * Input files
      */
-    sample_sheet_file = file(
-        "${projectDir}/assets/samples.csv",
+    samplesheet = file(params.samplesheet),
         checkIfExists: true
     )
 
