@@ -61,7 +61,7 @@ workflow {
     )
 
     sample_sheet_ch = Channel.value(
-        sample_sheet_file
+        samplesheet
     )
 
 
@@ -70,7 +70,7 @@ workflow {
      */
     samples_ch = Channel
         .fromPath(
-            sample_sheet_file,
+            samplesheet,
             checkIfExists: true
         )
         .splitCsv(header: true)
