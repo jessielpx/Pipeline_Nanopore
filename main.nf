@@ -32,7 +32,8 @@ workflow {
     /*
      * Input files
      */
-    samplesheet = file(params.samplesheet),
+    samplesheet = file(
+        params.samplesheet,
         checkIfExists: true
     )
 

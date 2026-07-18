@@ -19,9 +19,34 @@ process PREPROCESS_ANNOTATION {
 
     script:
     """
+    set -euo pipefail
+
+    grep '^>' "${reference_fasta}" \
+        | sed 's/^>//' \
+        | cut -d' ' -f1 \
+        > reference_contigs.txt
+
+    awk '
+    BEGIN {
+        while ((getline < "reference_contigs.txt") > 0) {
+            keep[\$1] = 1
+        }
+    }
+
+    /^#/ {
+        print
+        next
+    }
+
+    keep[\$1] {
+        print
+    }
+    ' "${annotation_gtf}" \
+      > annotation.filtered.gtf
+
     gffread \
-        ${annotation_gtf} \
-        -g ${reference_fasta} \
+        annotation.filtered.gtf \
+        -g "${reference_fasta}" \
         -T \
         -o annotation.cleaned.gtf
     """

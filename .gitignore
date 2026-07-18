@@ -1,22 +1,33 @@
 # Nextflow
 .nextflow/
-.nextflow.log*
-
-# Outputs
-results/
+.nextflow*
 work/
+nextflow_work/
+.nextflow.log*
+timeline.html
+trace.txt
+report.html
+dag.html
 
-# Large sequencing files
-*.fastq
-*.fastq.gz
-*.fq
-*.fq.gz
-*.bam
-*.bai
-
-# Containers
-*.img
-*.sif
+# Slurm
+slurm-*.out
+slurm-*.err
+krill_batch*.out
+krill_batch*.err
 
 # macOS
 .DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~
+
+# Results (generated)
+results/
+logs/
