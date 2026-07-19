@@ -1,423 +1,338 @@
 # Krill-Pipeline-Nanopore
 
-**Pipeline that can be digested well by "Rorqual"**
+Hi colleagues, this is the pipeline I made for Nanopore long-read RNA sequencing data. The pipeline performs quality control, genome alignment, transcriptome analysis, differential expression analysis, and gene fusion detection using JAFFAL.
 
-A modular **Nextflow DSL2** pipeline for Oxford Nanopore long-read RNA sequencing analysis.
+The pipeline was designed for running on Rorqual, that's why I named it "Krill".
 
-Krill-Pipeline-Nanopore provides an automated workflow for sequencing quality control, read preprocessing, fusion detection, transcriptome analysis, and downstream differential and isoform analyses.
+## Overview
 
----
+# Pipeline workflow
 
-# Workflow
-
-```text
-                 sequencing_summary.txt
-                           │
-                           ▼
-                        pycoQC
-                           │
-                           ▼
-                        FASTCAT
-                    ┌──────────────┐
-                    │              │
-                    ▼              ▼
-                 JAFFAL      Genome Alignment
-                                 │
-                                 ▼
-                        Transcript Assembly
-                                 │
-                                 ▼
-                      Transcript Quantification
-                                 │
-                                 ▼
-                     Differential Expression
-                                 │
-                                 ▼
-                    IsoformSwitchAnalyzeR
+```
+Raw FASTQ files
+        │
+        ▼
+FASTCAT
+        │
+        ▼
+Genome alignment
+        │
+        ├──────────────► JAFFAL
+        │                     
+        ▼
+Transcriptome analysis
+        │
+        ▼
+Annotation analysis
+        │
+        ▼
+Differential expression analysis
 ```
 
 ---
 
-# Features
+# Before you start
 
-- Oxford Nanopore RNA sequencing workflow
-- Nextflow DSL2 modular design
-- pycoQC sequencing QC
-- FASTCAT read merging
-- JAFFAL fusion detection
-- Genome alignment
-- Transcript assembly
-- Transcript quantification
-- Differential expression analysis
-- Isoform switching analysis
-- Easily extensible with additional modules
+Before running the pipeline, prepare the following:
+
+* Raw FASTQ directory
+* Sequencing summary file
+* Sample sheet
+* Reference genome (FASTA)
+* Reference annotation (GTF)
+* JAFFAL reference directory
+* A working directory for the sequencing run
+
+The following sections describe each item in detail.
 
 ---
 
-# Requirements
+# Input files
 
-The pipeline requires:
+## 1. Raw FASTQ directory
 
-- Nextflow (>=25)
-- Java 21
-- Apptainer (Singularity)
-- Slurm (recommended)
+Provide the directory containing barcode folders produced after Nanopore basecalling.
 
-Example module loading (Alliance Rorqual):
+Example:
 
-```bash
-module load StdEnv/2023
-module load java/21.0.1
-module load nextflow/25.10.2
-module load apptainer/1.4.5
 ```
-
----
-
-# Installation
-
-Clone the repository.
-
-```bash
-git clone git@github.com:jessielpx/Krill-Pipeline-Nanopore.git
-
-cd Krill-Pipeline-Nanopore
-```
-
----
-
-# Quick Start
-
-The pipeline can be started in **five steps**.
-
-## Step 1. Prepare your sequencing data
-
-Your FASTQ directory should look like
-
-```text
 batch1-8/
 
-├── barcode01/
-│      *.fastq.gz
-│
-├── barcode02/
-│      *.fastq.gz
-│
-├── barcode03/
-│      *.fastq.gz
-│
-└── ...
+barcode01/
+barcode02/
+barcode03/
+...
+barcode96/
 ```
 
-Each barcode folder contains FASTQ files from one barcode.
+Pipeline parameter:
 
-You should also have the sequencing summary file produced during basecalling.
-
-Example
-
-```text
-sequencing_summary_run1.txt
+```
+--fastq_dir
 ```
 
 ---
 
-## Step 2. Prepare the sample sheet
+## 2. Sequencing summary
 
-Edit
+Provide the sequencing summary generated during basecalling.
 
-```text
-assets/samples.csv
+Example:
+
+```
+sequencing_summary_run2_5.txt
 ```
 
-Example
+Pipeline parameter:
 
-| barcode | sample | alias | condition |
-|---------|---------|---------|-----------|
-| barcode01 | sample20 | sample20 | LR |
-| barcode02 | sample27 | sample27 | LR |
-| barcode03 | sample74 | sample74 | HR |
-
-### Notes
-
-- `barcode` must exactly match the FASTQ folder name.
-- `sample` should be unique.
-- `condition` is used for downstream differential analysis.
-
----
-
-## Step 3. Download the JAFFAL reference
-
-Reference files are **not included** in this repository because they are several gigabytes in size.
-
-Run the setup script once:
-
-```bash
-bash scripts/download_jaffal_reference.sh \
-    /path/to/reference_directory
 ```
-
-The script will
-
-- download the official JAFFAL hg38 + GENCODE49 reference
-- extract the archive
-- check all required files
-- build Bowtie2 indexes if necessary
-- print the reference directory
-
-This only needs to be done once.
-
----
-
-## Step 4. Configure the reference
-
-Open
-
-```text
-nextflow.config
-```
-
-Update
-
-```groovy
-params {
-
-    jaffal_ref_dir = "/path/to/JAFFAL_reference"
-
-}
+--summary
 ```
 
 ---
 
-## Step 5. Run the pipeline
+## 3. Sample sheet
 
-Example
+The sample sheet links sequencing barcodes to biological samples and experimental groups.
+
+Pipeline parameter:
+
+```
+--samplesheet
+```
+
+Required columns:
+
+| Column    | Description                 |
+| --------- | --------------------------- |
+| barcode   | Nanopore barcode directory  |
+| sample    | Sample identifier           |
+| alias     | Sample name used in reports |
+| condition | Experimental condition      |
+
+Example:
+
+| barcode   | sample   | alias      | condition |
+| --------- | -------- | ---------- | --------- |
+| barcode13 | sample16 | Patient001 | HR        |
+| barcode14 | sample72 | Patient002 | control   |
+
+---
+
+## 4. Reference genome
+
+Genome FASTA used for alignment.
+
+Pipeline parameter:
+
+```
+--ref_genome
+```
+
+Example:
+
+```
+Homo_sapiens.GRCh38.fa
+```
+
+---
+
+## 5. Reference annotation
+
+Genome annotation in GTF format.
+
+Pipeline parameter:
+
+```
+--ref_annotation
+```
+
+Example:
+
+```
+genes.gtf
+```
+
+---
+
+## 6. JAFFAL reference
+
+JAFFAL requires a pre-built reference directory.
+
+Pipeline parameter:
+
+```
+--jaffal_ref_dir
+```
+
+Example:
+
+```
+JAFFA_reference_hg38_gencode49/
+
+hg38.fa
+hg38_gencode49.fa
+hg38_gencode49.bed
+hg38_gencode49.tab
+...
+```
+
+For our laboratory, this directory is available in the shared folder.
+
+---
+
+# Preparing a run directory
+
+Create one working directory for each sequencing batch.
+
+Example:
+
+```
+Batch2/
+
+batch2_samples.csv
+
+alignment/
+
+bam/
+
+fastcat/
+
+differential_expression/
+
+jaffal/
+
+logs/
+
+nextflow_work/
+```
+
+The pipeline writes all outputs into this directory.
+
+---
+
+# Running the pipeline
+
+## Interactive execution
+
+Example:
 
 ```bash
 nextflow run . \
     -profile rorqual \
-    --summary /path/to/sequencing_summary_run1.txt \
-    --fastq_dir /path/to/batch1-8
-```
-
-This executes
-
-```text
-pycoQC
-
-↓
-
-FASTCAT
-
-↓
-
-JAFFAL
+    --samplesheet batch2_samples.csv \
+    --summary sequencing_summary.txt \
+    --fastq_dir batch1-8 \
+    --ref_genome Homo_sapiens.GRCh38.fa \
+    --ref_annotation genes.gtf \
+    --jaffal_ref_dir JAFFA_reference_hg38_gencode49 \
+    --run_id Batch2 \
+    --outdir Batch2
 ```
 
 ---
 
-# Running the complete transcriptome workflow
+## SLURM execution
 
-The complete workflow additionally requires
+A complete example SLURM submission script is provided:
 
-- reference genome FASTA
-- annotation GTF
+```
+run_batch2.sh
+```
 
-Example
+Submit with:
 
 ```bash
-nextflow run . \
-    -profile rorqual \
-    --summary /path/to/sequencing_summary_run1.txt \
-    --fastq_dir /path/to/batch1-8 \
-    --ref_genome genome.fa \
-    --ref_annotation genes.gtf
-```
-
-The workflow becomes
-
-```text
-pycoQC
-
-↓
-
-FASTCAT
-
-↓
-
-Genome alignment
-
-↓
-
-Transcript assembly
-
-↓
-
-Transcript quantification
-
-↓
-
-Differential expression
-
-↓
-
-IsoformSwitchAnalyzeR
+sbatch run_batch2.sh
 ```
 
 ---
 
-# Input
+# Output directory
 
-Required
+After completion, the run directory contains:
 
-| Input | Description |
-|--------|-------------|
-| sequencing_summary.txt | Nanopore sequencing summary |
-| FASTQ directory | Barcode folders containing FASTQ files |
-| samples.csv | Sample metadata |
-
-Additional for transcriptome workflow
-
-| Input | Description |
-|--------|-------------|
-| Genome FASTA | Reference genome |
-| Annotation GTF | Gene annotation |
-
----
-
-# Output
-
-Typical output structure
-
-```text
-results/
-
-├── pycoqc/
-│
-├── fastcat/
-│
-├── jaffal/
-│
-├── alignment/
-│
-├── transcriptome/
-│
-├── differential_expression/
-│
-└── isoform_switch/
+```
+alignment/
 ```
 
----
+Genome alignment files.
 
-# JAFFAL output
-
-The primary fusion result is
-
-```text
-sampleX.jaffa_results.csv
+```
+bam/
 ```
 
-Important columns
+Final BAM files.
 
-| Column | Description |
-|---------|-------------|
-| Fusion | Candidate fusion genes |
-| Classification | HighConfidence / LowConfidence / PotentialTransSplicing |
-| Spanning Reads | Number of supporting reads |
-| Rearrangement | Genomic rearrangement evidence |
-| Known COSMIC | COSMIC annotation |
-| GTEx Samples | Number of normal GTEx samples |
-
----
-
-# Troubleshooting
-
-## Missing sequencing summary
-
-Provide
-
-```text
---summary sequencing_summary_run1.txt
+```
+fastcat/
 ```
 
----
+FASTCAT reports and merged FASTQ files.
 
-## Missing FASTQ directory
-
-Provide
-
-```text
---fastq_dir path/to/batch1-8
+```
+jaffal/
 ```
 
----
+Fusion detection results.
 
-## JAFFAL cannot find the reference
+Each sample has its own directory containing:
 
-Check
-
-```groovy
-params.jaffal_ref_dir
+```
+jaffa_results.csv
+jaffa_results.fasta
 ```
 
-in
+The pipeline also automatically generates:
 
-```text
-nextflow.config
+```
+merged_jaffal_results.csv
 ```
 
----
+which combines all sample-level fusion calls into a single table.
 
-## Exit status 137
-
-The process exceeded available memory.
-
-Increase the memory allocated to the corresponding Nextflow process.
-
----
-
-# Repository structure
-
-```text
-Krill-Pipeline-Nanopore/
-
-├── assets/
-│
-├── docs/
-│
-├── modules/
-│
-├── scripts/
-│      download_jaffal_reference.sh
-│
-├── tests/
-│
-├── main.nf
-│
-├── nextflow.config
-│
-└── README.md
+```
+transcripts/
 ```
 
+Transcript assemblies.
+
+```
+quantification/
+```
+
+Expression quantification results.
+
+```
+differential_expression/
+```
+
+Differential expression analysis results.
+
+```
+logs/
+```
+
+Nextflow log files.
+
+```
+nextflow_work/
+```
+
+Intermediate Nextflow working files.
+
 ---
 
-# Citation
+# Common problems
 
-If you use JAFFAL, please cite
+* Missing sequencing summary
+* Incorrect barcode names in the sample sheet
+* Reference genome and annotation mismatch
+* Missing JAFFAL reference directory
+* Interrupted runs (resume using `-resume`)
 
-Davidson NM et al.
+---
 
-**JAFFAL: Detecting fusion genes with long-read transcriptome sequencing.**
+# Contact
 
-Genome Biology (2022)
-
-Please also cite the original software used in this workflow, including
-
-- Nextflow
-- pycoQC
-- FASTCAT
-- JAFFAL
-- minimap2
-- StringTie
-- Salmon
-- GFFCompare
-- IsoformSwitchAnalyzeR
+Please open a GitHub Issue for bug reports or feature requests.
