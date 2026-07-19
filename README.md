@@ -4,7 +4,9 @@ Hi colleagues, this is the pipeline I made for Nanopore long-read RNA sequencing
 
 The pipeline was designed for running on Rorqual, that's why I named it "Krill".
 
-## Overview
+# Overview
+
+
 
 # Pipeline workflow
 
@@ -181,35 +183,90 @@ For our laboratory, this directory is available in the shared folder.
 
 ---
 
-# Preparing a run directory
+# Preparing the pipeline
 
-Create one working directory for each sequencing batch.
+## 1. Choose a project directory
 
-Example:
+Move to the directory where you want to store the pipeline:
 
-```
-Batch2/
-
-batch2_samples.csv
-
-alignment/
-
-bam/
-
-fastcat/
-
-differential_expression/
-
-jaffal/
-
-logs/
-
-nextflow_work/
+```bash
+cd /home/$USER/links/projects/rrg-lefranco/$USER/Nanopore
 ```
 
-The pipeline writes all outputs into this directory.
+Create the directory if it does not already exist:
+
+```bash
+mkdir -p /home/$USER/links/projects/rrg-lefranco/$USER/Nanopore
+cd /home/$USER/links/projects/rrg-lefranco/$USER/Nanopore
+```
 
 ---
+
+## 2. Clone the GitHub repository
+
+Clone the pipeline:
+
+```bash
+git clone https://github.com/jessielpx/Krill-Pipeline-Nanopore.git
+```
+
+Enter the repository:
+
+```bash
+cd Krill-Pipeline-Nanopore
+```
+
+Check that the repository was downloaded correctly:
+
+```bash
+ls
+```
+
+The repository should contain files and directories similar to:
+
+```text
+Krill-Pipeline-Nanopore/
+├── main.nf
+├── nextflow.config
+├── README.md
+├── modules/
+├── subworkflows/
+├── scripts/
+└── run_batch2.sh
+```
+
+---
+
+## 4. Update an existing clone
+
+If the repository was cloned previously, do not clone it again.
+
+Enter the existing repository:
+
+```bash
+cd /home/$USER/links/projects/rrg-lefranco/$USER/Nanopore/Krill-Pipeline-Nanopore
+```
+
+Download the latest version:
+
+```bash
+git pull origin main
+```
+
+Check the current commit:
+
+```bash
+git log --oneline -n 3
+```
+
+---
+
+## 5. Check the pipeline configuration
+
+Make sure all the paths to files/folders and the username are correct.
+
+---
+
 
 # Running the pipeline
 
