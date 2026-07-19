@@ -6,6 +6,7 @@ The pipeline was designed for running on Rorqual, that's why I named it "Krill".
 
 # Overview
 [Pipeline workflow](https://github.com/jessielpx/Krill-Pipeline-Nanopore/blob/main/README.md#pipeline-workflow)
+https://github.com/jessielpx/Krill-Pipeline-Nanopore/blob/main/README.md#before-you-start
 
 
 
