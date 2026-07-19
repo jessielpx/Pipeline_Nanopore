@@ -5,7 +5,7 @@ include { GENOME_ALIGNMENT }       from './subworkflows/genome_alignment'
 include { TRANSCRIPTOME_ANALYSIS } from './subworkflows/transcriptome_analysis'
 include { DIFFERENTIAL_ANALYSIS }  from './subworkflows/differential_analysis'
 include { ANNOTATION_ANALYSIS }    from './subworkflows/annotation_analysis'
-
+include { FUSION_ANALYSIS }        from './subworkflows/fusion_analysis'
 
 workflow {
 
@@ -28,6 +28,9 @@ workflow {
         error "Please provide --ref_annotation /path/to/annotation.gtf"
     }
 
+    if (!params.jaffal_ref_dir) {
+        error "Please provide --jaffal_ref_dir /path/to/JAFFA_reference_directory"
+    }
 
     /*
      * Input files
@@ -133,6 +136,13 @@ workflow {
         samples_ch
     )
 
+    /*
+     * Long-read fusion detection
+     */
+    FUSION_ANALYSIS(
+        QC.out.fastcat_results,
+        sample_sheet_ch
+    )
 
     /*
      * Extract merged FASTQ files
