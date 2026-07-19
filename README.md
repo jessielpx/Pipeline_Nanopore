@@ -213,32 +213,8 @@ The pipeline writes all outputs into this directory.
 
 # Running the pipeline
 
-## Interactive execution
 
-Example:
-
-```bash
-nextflow run . \
-    -profile rorqual \
-    --samplesheet batch2_samples.csv \
-    --summary sequencing_summary.txt \
-    --fastq_dir batch1-8 \
-    --ref_genome Homo_sapiens.GRCh38.fa \
-    --ref_annotation genes.gtf \
-    --jaffal_ref_dir JAFFA_reference_hg38_gencode49 \
-    --run_id Batch2 \
-    --outdir Batch2
-```
-
----
-
-## SLURM execution
-
-A complete example SLURM submission script is provided:
-
-```
-run_batch2.sh
-```
+A complete example SLURM submission script is [run_batch2.sh](run_batch2.sh):
 
 Submit with:
 
@@ -321,18 +297,3 @@ nextflow_work/
 
 Intermediate Nextflow working files.
 
----
-
-# Common problems
-
-* Missing sequencing summary
-* Incorrect barcode names in the sample sheet
-* Reference genome and annotation mismatch
-* Missing JAFFAL reference directory
-* Interrupted runs (resume using `-resume`)
-
----
-
-# Contact
-
-Please open a GitHub Issue for bug reports or feature requests.
