@@ -5,6 +5,7 @@ Hi colleagues, this is the pipeline I made for Nanopore long-read RNA sequencing
 The pipeline was designed for running on Rorqual, that's why I named it "Krill".
 
 # Overview
+[Pipeline workflow](# Pipeline workflow)
 
 
 
