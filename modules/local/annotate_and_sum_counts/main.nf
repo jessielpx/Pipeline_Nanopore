@@ -12,7 +12,7 @@ process ANNOTATE_AND_SUM_COUNTS {
 
     input:
     path transcript_counts
-    path merged_gtf
+    path transcript_annotation
     path annotation_script
 
     output:
@@ -22,7 +22,7 @@ process ANNOTATE_AND_SUM_COUNTS {
     script:
     """
     python ${annotation_script} \
-        --gtf ${merged_gtf} \
+        --annotation ${transcript_annotation} \
         --transcript-counts ${transcript_counts} \
         --transcript-output unfiltered_transcript_counts_with_genes.tsv \
         --gene-output all_gene_counts.tsv

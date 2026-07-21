@@ -5,6 +5,9 @@ include { MAP_TRANSCRIPTOME }         from '../modules/local/map_transcriptome/m
 include { SALMON_QUANT }              from '../modules/local/salmon_quant/main'
 include { MERGE_TRANSCRIPT_COUNTS }   from '../modules/local/merge_transcript_counts/main'
 include { ANNOTATE_AND_SUM_COUNTS }   from '../modules/local/annotate_and_sum_counts/main'
+include { GFFCOMPARE }                from '../modules/local/gffcompare/main'
+include { PARSE_GFFCOMPARE }          from '../modules/local/parse_gffcompare/main'
+
 
 workflow TRANSCRIPTOME_ANALYSIS {
 
@@ -15,6 +18,7 @@ workflow TRANSCRIPTOME_ANALYSIS {
     reference_fasta_ch
     merge_script_ch
     annotation_script_ch
+    parse_gffcompare_script_ch
 
     main:
 
@@ -85,11 +89,27 @@ workflow TRANSCRIPTOME_ANALYSIS {
     )
 
     /*
+     * Compare merged transcriptome against reference annotation
+     */
+    GFFCOMPARE(
+        STRINGTIE_MERGE.out.merged_gtf,
+        cleaned_gtf_ch
+    )
+
+    /*
+     * Create transcript-level gffcompare annotation table
+     */
+    PARSE_GFFCOMPARE(
+        GFFCOMPARE.out.annotated_gtf,
+        parse_gffcompare_script_ch
+    )
+
+    /*
      * Add gene IDs and construct gene-count matrix
      */
     ANNOTATE_AND_SUM_COUNTS(
         MERGE_TRANSCRIPT_COUNTS.out.counts,
-        STRINGTIE_MERGE.out.merged_gtf,
+        PARSE_GFFCOMPARE.out.annotation_table,
         annotation_script_ch
     )
 
@@ -105,6 +125,13 @@ workflow TRANSCRIPTOME_ANALYSIS {
 
     gene_counts =
         ANNOTATE_AND_SUM_COUNTS.out.gene_counts
+
+    annotated_gtf = GFFCOMPARE.out.annotated_gtf
+    gffcompare_stats = GFFCOMPARE.out.stats
+    gffcompare_tracking = GFFCOMPARE.out.tracking
+    gffcompare_loci = GFFCOMPARE.out.loci
+    transcript_annotation =
+        PARSE_GFFCOMPARE.out.annotation_table
 
     transcriptome_bam = MAP_TRANSCRIPTOME.out.bam
     salmon_counts = SALMON_QUANT.out.counts

@@ -4,7 +4,6 @@ include { QC }                     from './subworkflows/qc'
 include { GENOME_ALIGNMENT }       from './subworkflows/genome_alignment'
 include { TRANSCRIPTOME_ANALYSIS } from './subworkflows/transcriptome_analysis'
 include { DIFFERENTIAL_ANALYSIS }  from './subworkflows/differential_analysis'
-include { ANNOTATION_ANALYSIS }    from './subworkflows/annotation_analysis'
 include { FUSION_ANALYSIS }        from './subworkflows/fusion_analysis'
 
 workflow {
@@ -175,16 +174,7 @@ workflow {
         GENOME_ALIGNMENT.out.cleaned_gtf,
         reference_fasta_ch,
         merge_script_ch,
-        annotation_script_ch
-    )
-
-
-    /*
-     * gffcompare transcript annotation
-     */
-    ANNOTATION_ANALYSIS(
-        TRANSCRIPTOME_ANALYSIS.out.merged_gtf,
-        GENOME_ALIGNMENT.out.cleaned_gtf,
+        annotation_script_ch,
         parse_gffcompare_script_ch
     )
 

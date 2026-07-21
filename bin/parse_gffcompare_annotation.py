@@ -58,6 +58,10 @@ def main():
                     "transcript_id": transcript_id,
                     "gene_id": get_attribute(attributes, "gene_id"),
                     "ref_gene_id": get_attribute(attributes, "ref_gene_id"),
+                    "gene_name": (
+                        get_attribute(attributes, "ref_gene_name")
+                        or get_attribute(attributes, "gene_name")
+                    ),
                     "ref_id": (
                         get_attribute(attributes, "cmp_ref")
                         or get_attribute(attributes, "ref_id")
